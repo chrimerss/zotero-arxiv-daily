@@ -1,7 +1,6 @@
 from loguru import logger
 from pyzotero import zotero
-from omegaconf import DictConfig, ListConfig
-from omegaconf.errors import MissingMandatoryValue
+from omegaconf import DictConfig, ListConfig, OmegaConf
 from .utils import glob_match
 from .retriever import get_retriever_cls
 from .protocol import CorpusPaper
@@ -31,12 +30,8 @@ def normalize_include_path_patterns(include_path: list[str] | ListConfig | None)
 
 
 def resolve_executor_sources(config: DictConfig) -> list[str]:
-    try:
+    if not OmegaConf.is_missing(config.executor, "source"):
         configured_sources = config.executor.source
-    except MissingMandatoryValue:
-        configured_sources = None
-
-    if configured_sources is not None:
         return list(configured_sources)
 
     inferred_sources = []
@@ -59,7 +54,7 @@ def resolve_executor_sources(config: DictConfig) -> list[str]:
 
 
 class Executor:
-    def __init__(self, config:DictConfig):
+    def __init__(self, config: DictConfig):
         self.config = config
         self.include_path_patterns = normalize_include_path_patterns(config.zotero.include_path)
         sources = resolve_executor_sources(config)
