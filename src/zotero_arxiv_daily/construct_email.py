@@ -2,8 +2,23 @@ from .protocol import Paper
 import math
 
 
-framework = """
-<!DOCTYPE HTML>
+BMAC_URL = "https://buymeacoffee.com/allenli"
+BMAC_QR_URL = "https://github.com/user-attachments/assets/f781cea9-feef-4574-a180-01464e7512fc"
+
+BMAC_BLOCK = f"""
+<div style="text-align: center; margin-bottom: 24px; padding: 16px; background-color: #fff8e1; border: 1px solid #ffe082; border-radius: 8px; font-family: Arial, sans-serif;">
+  <p style="font-size: 16px; font-weight: bold; color: #333; margin: 0 0 12px 0;">☕ Support this project!</p>
+  <a href="{BMAC_URL}" target="_blank">
+    <img src="{BMAC_QR_URL}" alt="Buy Me a Coffee QR Code" width="100" height="100" style="display: block; margin: 0 auto 12px auto;" />
+  </a>
+  <a href="{BMAC_URL}" target="_blank" style="display: inline-block; text-decoration: none; font-size: 14px; font-weight: bold; background-color: #FFDD00; color: #000; padding: 8px 20px; border-radius: 4px;">
+    ☕ Buy Me a Coffee
+  </a>
+</div>
+"""
+
+framework = (
+"""<!DOCTYPE HTML>
 <html>
 <head>
   <style>
@@ -27,6 +42,9 @@ framework = """
 </head>
 <body>
 
+"""
++ BMAC_BLOCK
++ """
 <div>
     __CONTENT__
 </div>
@@ -39,6 +57,7 @@ To unsubscribe, remove your email in your Github Action setting.
 </body>
 </html>
 """
+)
 
 def get_empty_html():
   block_template = """
