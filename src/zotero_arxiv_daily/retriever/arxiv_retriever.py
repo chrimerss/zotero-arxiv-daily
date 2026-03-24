@@ -52,12 +52,19 @@ class ArxivRetriever(BaseRetriever):
         authors = [a.name for a in raw_paper.authors]
         abstract = raw_paper.summary
         pdf_url = raw_paper.pdf_url
+        pool = ThreadPoolExecutor(max_workers=1)
+        timed_out = False
+        future = pool.submit(extract_text_from_pdf, raw_paper)
         try:
-            with ThreadPoolExecutor(max_workers=1) as pool:
-                full_text = pool.submit(extract_text_from_pdf, raw_paper).result(timeout=PDF_EXTRACT_TIMEOUT)
+            full_text = future.result(timeout=PDF_EXTRACT_TIMEOUT)
         except TimeoutError:
+            timed_out = True
             logger.warning(f"PDF extraction timed out for {raw_paper.title}")
+            future.cancel()
             full_text = None
+        finally:
+            # Do not block on shutdown after timeout; fallback extraction can continue immediately.
+            pool.shutdown(wait=not timed_out, cancel_futures=True)
         if full_text is None:
             full_text = extract_text_from_tar(raw_paper)
         return Paper(
