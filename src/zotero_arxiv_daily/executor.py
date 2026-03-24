@@ -1,6 +1,6 @@
 from loguru import logger
 from pyzotero import zotero
-from omegaconf import DictConfig, ListConfig
+from omegaconf import DictConfig, ListConfig, OmegaConf
 from .utils import glob_match
 from .retriever import get_retriever_cls
 from .protocol import CorpusPaper
@@ -29,12 +29,37 @@ def normalize_include_path_patterns(include_path: list[str] | ListConfig | None)
     return list(include_path)
 
 
+def resolve_executor_sources(config: DictConfig) -> list[str]:
+    if not OmegaConf.is_missing(config.executor, "source"):
+        configured_sources = config.executor.source
+        return list(configured_sources)
+
+    inferred_sources = []
+    for source_name, source_config in config.source.items():
+        categories = source_config.get("category", None)
+        if categories:
+            inferred_sources.append(source_name)
+
+    if not inferred_sources:
+        raise ValueError(
+            "No paper source configured. Please set `executor.source` explicitly or configure "
+            "at least one non-empty `source.<name>.category`."
+        )
+
+    logger.warning(
+        "`executor.source` is not set. Inferred sources from configured categories: {}",
+        inferred_sources,
+    )
+    return inferred_sources
+
+
 class Executor:
-    def __init__(self, config:DictConfig):
+    def __init__(self, config: DictConfig):
         self.config = config
         self.include_path_patterns = normalize_include_path_patterns(config.zotero.include_path)
+        sources = resolve_executor_sources(config)
         self.retrievers = {
-            source: get_retriever_cls(source)(config) for source in config.executor.source
+            source: get_retriever_cls(source)(config) for source in sources
         }
         self.reranker = get_reranker_cls(config.executor.reranker)(config)
         self.openai_client = OpenAI(api_key=config.llm.api.key, base_url=config.llm.api.base_url)

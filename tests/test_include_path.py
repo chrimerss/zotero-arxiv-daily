@@ -4,7 +4,11 @@ from types import SimpleNamespace
 import pytest
 from omegaconf import OmegaConf
 
-from zotero_arxiv_daily.executor import Executor, normalize_include_path_patterns
+from zotero_arxiv_daily.executor import (
+    Executor,
+    normalize_include_path_patterns,
+    resolve_executor_sources,
+)
 from zotero_arxiv_daily.protocol import CorpusPaper
 
 
@@ -53,3 +57,47 @@ def test_filter_corpus_matches_any_path_against_any_pattern():
     filtered = executor.filter_corpus(corpus)
 
     assert [paper.title for paper in filtered] == ["Survey Paper", "Reading Group Paper"]
+
+
+def test_resolve_executor_sources_returns_explicit_sources():
+    config = OmegaConf.create(
+        {
+            "executor": {"source": ["arxiv"]},
+            "source": {
+                "arxiv": {"category": ["cs.AI"]},
+                "biorxiv": {"category": None},
+            },
+        }
+    )
+
+    assert resolve_executor_sources(config) == ["arxiv"]
+
+
+def test_resolve_executor_sources_infers_sources_from_categories():
+    config = OmegaConf.create(
+        {
+            "executor": {"source": "???"},
+            "source": {
+                "arxiv": {"category": ["cs.AI"]},
+                "biorxiv": {"category": None},
+                "medrxiv": {"category": ["neurology"]},
+            },
+        }
+    )
+
+    assert resolve_executor_sources(config) == ["arxiv", "medrxiv"]
+
+
+def test_resolve_executor_sources_raises_when_no_source_configured():
+    config = OmegaConf.create(
+        {
+            "executor": {"source": "???"},
+            "source": {
+                "arxiv": {"category": None},
+                "biorxiv": {"category": []},
+            },
+        }
+    )
+
+    with pytest.raises(ValueError, match="No paper source configured"):
+        resolve_executor_sources(config)
