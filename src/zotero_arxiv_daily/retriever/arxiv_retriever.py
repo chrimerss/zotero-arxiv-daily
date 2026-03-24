@@ -61,6 +61,10 @@ class ArxivRetriever(BaseRetriever):
             timed_out = True
             logger.warning(f"PDF extraction timed out for {raw_paper.title}")
             full_text = None
+        except Exception as e:
+            timed_out = True
+            logger.warning(f"PDF extraction failed for {raw_paper.title}: {type(e).__name__}: {e}")
+            full_text = None
         finally:
             # Do not block on shutdown after timeout; fallback extraction can continue immediately.
             pool.shutdown(wait=not timed_out)
